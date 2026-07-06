@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vocab" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Vocabulary Builder</title>
+</head>
+<body>
+  <main class="app-shell" aria-live="polite">
+    <section class="hero">
+      <p class="eyebrow">Advanced vocabulary</p>
+      <h1>Vocabulary Builder</h1>
+      <p class="intro">See a rare English word first. Reveal the meaning only when you are ready.</p>
+    </section>
+
+    <section class="stats" aria-label="Learning counters">
+      <article class="stat-card">
+        <span class="stat-label">Already known</span>
+        <strong id="knownCount">0</strong>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Newly learned</span>
+        <strong id="learnedCount">0</strong>
+      </article>
+    </section>
+
+    <section class="word-card" aria-label="Current word">
+      <div class="word-header">
+        <span id="sourceBadge" class="source-badge">API word</span>
+        <button id="skipButton" class="text-button" type="button">Skip</button>
+      </div>
+
+      <h2 id="wordDisplay" class="word-display">Loading…</h2>
+      <p id="phoneticDisplay" class="phonetic" hidden></p>
+
+      <button id="showMeaningButton" class="primary-button" type="button" disabled>
+        Show meaning
+      </button>
+
+      <div id="meaningPanel" class="meaning-panel" hidden>
+        <p id="partOfSpeech" class="part-of-speech"></p>
+        <p id="definitionDisplay" class="definition"></p>
+        <p id="exampleDisplay" class="example" hidden></p>
+      </div>
+
+      <div id="answerButtons" class="answer-buttons" hidden>
+        <button id="knownButton" class="secondary-button" type="button">I already knew this</button>
+        <button id="learnedButton" class="secondary-button" type="button">Newly learned</button>
+      </div>
+
+      <button id="nextWordButton" class="ghost-button" type="button" hidden>
+        Next word
+      </button>
+
+      <p id="statusMessage" class="status-message">Fetching a hard random word…</p>
+    </section>
+
+    <section class="settings-card" aria-label="Settings">
+      <button id="resetButton" class="danger-button" type="button">Reset counters</button>
+      <p class="fine-print">Counters are saved only on this device/browser using local storage.</p>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
