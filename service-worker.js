@@ -1,4 +1,4 @@
-const CACHE_NAME = "vocab-builder-game-v2";
+const CACHE_NAME = "vocab-builder-game-v3";
 const APP_SHELL = [
   "./",
   "./index.html",

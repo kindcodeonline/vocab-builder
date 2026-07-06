@@ -230,40 +230,100 @@ async function fetchDefinition(word) {
   if (!response.ok) return null;
   const data = await response.json();
   const firstEntry = data?.[0];
-  const firstMeaning = firstEntry?.meanings?.[0];
-  const firstDefinition = firstMeaning?.definitions?.[0];
+  if (!firstEntry?.meanings?.length) return null;
 
-  if (!firstDefinition?.definition) return null;
+  const definitions = [];
+  const seenDefinitions = new Set();
+
+  firstEntry.meanings.forEach(meaning => {
+    const partOfSpeech = meaning.partOfSpeech || "definition";
+
+    meaning.definitions?.forEach(item => {
+      if (!item.definition) return;
+
+      const normalised = item.definition.trim().toLowerCase();
+      if (seenDefinitions.has(normalised)) return;
+      seenDefinitions.add(normalised);
+
+      definitions.push({
+        partOfSpeech,
+        definition: item.definition,
+        example: item.example || ""
+      });
+    });
+  });
+
+  if (!definitions.length) return null;
 
   return {
     word: firstEntry.word || word,
     phonetic: firstEntry.phonetic || firstEntry.phonetics?.find(item => item.text)?.text || "",
-    partOfSpeech: firstMeaning.partOfSpeech || "",
-    definition: firstDefinition.definition,
-    example: firstDefinition.example || ""
+    definitions,
+    partOfSpeech: definitions[0].partOfSpeech,
+    definition: definitions[0].definition,
+    example: definitions[0].example
   };
 }
 
 function getFallbackWord(difficulty) {
   const list = FALLBACK_WORDS[difficulty] || FALLBACK_WORDS[3];
   const pick = list[Math.floor(Math.random() * list.length)];
-  return { ...pick, source: "Offline fallback" };
+  return {
+    ...pick,
+    definitions: [{
+      partOfSpeech: pick.partOfSpeech || "definition",
+      definition: pick.definition,
+      example: pick.example || ""
+    }],
+    source: "Offline fallback"
+  };
 }
 
 function revealMeaning() {
   if (!currentWord) return;
-  els.partOfSpeech.textContent = currentWord.partOfSpeech || "definition";
-  els.definitionDisplay.textContent = currentWord.definition;
 
-  if (currentWord.example) {
-    els.exampleDisplay.textContent = `Example: ${currentWord.example}`;
-    els.exampleDisplay.hidden = false;
-  }
+  const definitions = currentWord.definitions?.length
+    ? currentWord.definitions
+    : [{
+      partOfSpeech: currentWord.partOfSpeech || "definition",
+      definition: currentWord.definition,
+      example: currentWord.example || ""
+    }];
+
+  els.partOfSpeech.textContent = `${definitions.length} ${definitions.length === 1 ? "definition" : "definitions"}`;
+  els.definitionDisplay.innerHTML = "";
+
+  definitions.forEach((item, index) => {
+    const article = document.createElement("article");
+    article.className = "definition-item";
+
+    const heading = document.createElement("p");
+    heading.className = "definition-heading";
+    heading.textContent = `${index + 1}. ${item.partOfSpeech || "definition"}`;
+
+    const definition = document.createElement("p");
+    definition.className = "definition-text";
+    definition.textContent = item.definition;
+
+    article.append(heading, definition);
+
+    if (item.example) {
+      const example = document.createElement("p");
+      example.className = "example";
+      example.textContent = `Example: ${item.example}`;
+      article.appendChild(example);
+    }
+
+    els.definitionDisplay.appendChild(article);
+  });
+
+  els.exampleDisplay.hidden = true;
+  els.exampleDisplay.textContent = "";
 
   els.meaningPanel.hidden = false;
   els.answerButtons.hidden = false;
   els.showMeaningButton.hidden = true;
-  els.statusMessage.textContent = "Did you already know it?";
+  els.statusMessage.textContent = "Scroll the definitions if needed, then choose honestly.";
 }
 
 async function answerWord(wasKnown) {

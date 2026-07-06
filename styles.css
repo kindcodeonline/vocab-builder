@@ -306,3 +306,37 @@ button:disabled {
   .stats { gap: .5rem; }
   .stat-card { padding: .65rem; border-radius: 1rem; }
 }
+
+.definitions-list {
+  max-height: min(42vh, 22rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: .35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.definition-item {
+  padding: .85rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.definition-item:first-child { border-top: 0; padding-top: 0; }
+.definition-item:last-child { padding-bottom: 0; }
+
+.definition-heading {
+  margin-bottom: .3rem;
+  color: var(--accent);
+  font-size: .86rem;
+  font-weight: 900;
+  text-transform: lowercase;
+}
+
+.definition-text {
+  margin-bottom: .45rem;
+  font-size: 1.04rem;
+  line-height: 1.45;
+}
+
+.definitions-list .example {
+  margin-bottom: 0;
+}
