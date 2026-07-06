@@ -11,61 +11,96 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
-  <title>Vocabulary Builder</title>
+  <title>Vocabulary Builder Game</title>
 </head>
 <body>
   <main class="app-shell" aria-live="polite">
     <section class="hero">
-      <p class="eyebrow">Advanced vocabulary</p>
-      <h1>Vocabulary Builder</h1>
-      <p class="intro">See a rare English word first. Reveal the meaning only when you are ready.</p>
+      <p class="eyebrow">Advanced vocabulary game</p>
+      <h1>Vocab Builder</h1>
+      <p class="intro">Start at medium difficulty. Known words get harder. Unknown words get easier. Harder words are worth more points.</p>
     </section>
 
-    <section class="stats" aria-label="Learning counters">
-      <article class="stat-card">
-        <span class="stat-label">Already known</span>
-        <strong id="knownCount">0</strong>
-      </article>
-      <article class="stat-card">
-        <span class="stat-label">Newly learned</span>
-        <strong id="learnedCount">0</strong>
-      </article>
+    <section id="setupScreen" class="setup-card" aria-label="Game setup">
+      <h2>Choose game length</h2>
+      <div class="length-buttons" role="group" aria-label="Choose number of words">
+        <button class="length-button" type="button" data-length="5">5 words</button>
+        <button class="length-button" type="button" data-length="10">10 words</button>
+        <button class="length-button" type="button" data-length="20">20 words</button>
+      </div>
+      <p class="fine-print">Scores are saved only on this device/browser.</p>
     </section>
 
-    <section class="word-card" aria-label="Current word">
-      <div class="word-header">
-        <span id="sourceBadge" class="source-badge">API word</span>
-        <button id="skipButton" class="text-button" type="button">Skip</button>
-      </div>
+    <section id="gameScreen" class="game-screen" hidden>
+      <section class="stats" aria-label="Current game stats">
+        <article class="stat-card">
+          <span class="stat-label">Score</span>
+          <strong id="scoreDisplay">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Word</span>
+          <strong id="progressDisplay">1/5</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Difficulty</span>
+          <strong id="difficultyDisplay">3</strong>
+        </article>
+      </section>
 
-      <h2 id="wordDisplay" class="word-display">Loading…</h2>
-      <p id="phoneticDisplay" class="phonetic" hidden></p>
+      <section class="word-card" aria-label="Current word">
+        <div class="word-header">
+          <span id="sourceBadge" class="source-badge">API word</span>
+          <span id="pointsBadge" class="points-badge">40 pts</span>
+        </div>
 
-      <button id="showMeaningButton" class="primary-button" type="button" disabled>
-        Show meaning
-      </button>
+        <h2 id="wordDisplay" class="word-display">Loading…</h2>
+        <p id="phoneticDisplay" class="phonetic" hidden></p>
 
-      <div id="meaningPanel" class="meaning-panel" hidden>
-        <p id="partOfSpeech" class="part-of-speech"></p>
-        <p id="definitionDisplay" class="definition"></p>
-        <p id="exampleDisplay" class="example" hidden></p>
-      </div>
+        <button id="showMeaningButton" class="primary-button" type="button" disabled>
+          Show meaning
+        </button>
 
-      <div id="answerButtons" class="answer-buttons" hidden>
-        <button id="knownButton" class="secondary-button" type="button">I already knew this</button>
-        <button id="learnedButton" class="secondary-button" type="button">Newly learned</button>
-      </div>
+        <div id="meaningPanel" class="meaning-panel" hidden>
+          <p id="partOfSpeech" class="part-of-speech"></p>
+          <p id="definitionDisplay" class="definition"></p>
+          <p id="exampleDisplay" class="example" hidden></p>
+        </div>
 
-      <button id="nextWordButton" class="ghost-button" type="button" hidden>
-        Next word
-      </button>
+        <div id="answerButtons" class="answer-buttons" hidden>
+          <button id="knownButton" class="secondary-button" type="button">I knew this</button>
+          <button id="notKnownButton" class="secondary-button" type="button">I didn’t know this</button>
+        </div>
 
-      <p id="statusMessage" class="status-message">Fetching a hard random word…</p>
+        <p id="statusMessage" class="status-message">Choose a game length to start.</p>
+      </section>
+
+      <button id="quitButton" class="ghost-button" type="button">End game</button>
     </section>
 
-    <section class="settings-card" aria-label="Settings">
-      <button id="resetButton" class="danger-button" type="button">Reset counters</button>
-      <p class="fine-print">Counters are saved only on this device/browser using local storage.</p>
+    <section id="resultScreen" class="result-card" hidden aria-label="Game result">
+      <p class="eyebrow">Game complete</p>
+      <h2 id="finalScoreDisplay">0 points</h2>
+      <p id="resultSummary" class="intro"></p>
+
+      <label class="name-label" for="playerNameInput">Enter name for high score</label>
+      <input id="playerNameInput" class="name-input" type="text" maxlength="18" autocomplete="name" placeholder="Your name" />
+      <button id="saveScoreButton" class="primary-button" type="button">Save score</button>
+      <button id="playAgainButton" class="ghost-button" type="button">Play again</button>
+    </section>
+
+    <section class="leaderboard-card" aria-label="High scores">
+      <div class="leaderboard-header">
+        <h2>High scores</h2>
+        <button id="clearScoresButton" class="text-button" type="button">Clear scores</button>
+      </div>
+
+      <div class="leaderboard-tabs" role="group" aria-label="High score list selector">
+        <button class="tab-button active" type="button" data-board="5">5</button>
+        <button class="tab-button" type="button" data-board="10">10</button>
+        <button class="tab-button" type="button" data-board="20">20</button>
+      </div>
+
+      <ol id="leaderboardList" class="leaderboard-list"></ol>
     </section>
   </main>
 

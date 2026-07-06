@@ -1,98 +1,163 @@
-const RANDOM_WORD_ENDPOINT = "https://random-word-api.herokuapp.com/word?number=5&diff=5";
-const DICTIONARY_ENDPOINT = word => `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
+const RANDOM_WORD_API = "https://random-word-api.herokuapp.com/word";
+const DICTIONARY_API = word => `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
 
 const STORAGE_KEYS = {
-  known: "vocabBuilder.knownCount",
-  learned: "vocabBuilder.learnedCount"
+  highScores: "vocabGameHighScoresV1",
+  lastName: "vocabGameLastNameV1"
 };
 
-const FALLBACK_WORDS = [
-  {
-    word: "perspicacious",
-    phonetic: "/ˌpɜːspɪˈkeɪʃəs/",
-    partOfSpeech: "adjective",
-    definition: "Having a ready and accurate understanding of things; mentally sharp.",
-    example: "Her perspicacious comments made the problem much easier to diagnose."
-  },
-  {
-    word: "obdurate",
-    phonetic: "/ˈɒbdjʊrət/",
-    partOfSpeech: "adjective",
-    definition: "Stubbornly refusing to change an opinion or course of action.",
-    example: "The committee remained obdurate despite several reasonable objections."
-  },
-  {
-    word: "pellucid",
-    phonetic: "/pəˈluːsɪd/",
-    partOfSpeech: "adjective",
-    definition: "Translucently clear, or easy to understand.",
-    example: "The speaker gave a pellucid explanation of a difficult concept."
-  },
-  {
-    word: "recalcitrant",
-    phonetic: "/rɪˈkælsɪtrənt/",
-    partOfSpeech: "adjective",
-    definition: "Resistant to authority, control, or instruction.",
-    example: "The recalcitrant system ignored the usual reset commands."
-  },
-  {
-    word: "sesquipedalian",
-    phonetic: "/ˌsɛskwɪpɪˈdeɪlɪən/",
-    partOfSpeech: "adjective",
-    definition: "Characterised by long words; polysyllabic.",
-    example: "His sesquipedalian style was impressive but not always clear."
-  }
-];
+const POINTS_BY_DIFFICULTY = {
+  1: 10,
+  2: 20,
+  3: 40,
+  4: 70,
+  5: 110
+};
+
+const FALLBACK_WORDS = {
+  1: [
+    { word: "ample", partOfSpeech: "adjective", definition: "More than enough; plentiful.", example: "There was ample time to finish." },
+    { word: "vivid", partOfSpeech: "adjective", definition: "Producing clear, strong images or feelings.", example: "She gave a vivid description." }
+  ],
+  2: [
+    { word: "lucid", partOfSpeech: "adjective", definition: "Clear and easy to understand.", example: "His explanation was lucid." },
+    { word: "novel", partOfSpeech: "adjective", definition: "New, unusual, or original.", example: "They proposed a novel solution." }
+  ],
+  3: [
+    { word: "ephemeral", partOfSpeech: "adjective", definition: "Lasting for a very short time.", example: "The trend proved ephemeral." },
+    { word: "obfuscate", partOfSpeech: "verb", definition: "To make something unclear or difficult to understand.", example: "The jargon obfuscated the message." }
+  ],
+  4: [
+    { word: "perspicacious", partOfSpeech: "adjective", definition: "Having keen insight or good judgement.", example: "Her perspicacious question changed the discussion." },
+    { word: "sagacious", partOfSpeech: "adjective", definition: "Wise, shrewd, and able to make good decisions.", example: "The sagacious leader waited." }
+  ],
+  5: [
+    { word: "sesquipedalian", partOfSpeech: "adjective", definition: "Using or characterised by very long words.", example: "His sesquipedalian style was hard to follow." },
+    { word: "ineffable", partOfSpeech: "adjective", definition: "Too great or extreme to be expressed in words.", example: "The view had an ineffable beauty." }
+  ]
+};
 
 const els = {
-  knownCount: document.querySelector("#knownCount"),
-  learnedCount: document.querySelector("#learnedCount"),
-  sourceBadge: document.querySelector("#sourceBadge"),
-  skipButton: document.querySelector("#skipButton"),
-  wordDisplay: document.querySelector("#wordDisplay"),
-  phoneticDisplay: document.querySelector("#phoneticDisplay"),
-  showMeaningButton: document.querySelector("#showMeaningButton"),
-  meaningPanel: document.querySelector("#meaningPanel"),
-  partOfSpeech: document.querySelector("#partOfSpeech"),
-  definitionDisplay: document.querySelector("#definitionDisplay"),
-  exampleDisplay: document.querySelector("#exampleDisplay"),
-  answerButtons: document.querySelector("#answerButtons"),
-  knownButton: document.querySelector("#knownButton"),
-  learnedButton: document.querySelector("#learnedButton"),
-  nextWordButton: document.querySelector("#nextWordButton"),
-  statusMessage: document.querySelector("#statusMessage"),
-  resetButton: document.querySelector("#resetButton")
+  setupScreen: document.getElementById("setupScreen"),
+  gameScreen: document.getElementById("gameScreen"),
+  resultScreen: document.getElementById("resultScreen"),
+  lengthButtons: document.querySelectorAll(".length-button"),
+  scoreDisplay: document.getElementById("scoreDisplay"),
+  progressDisplay: document.getElementById("progressDisplay"),
+  difficultyDisplay: document.getElementById("difficultyDisplay"),
+  sourceBadge: document.getElementById("sourceBadge"),
+  pointsBadge: document.getElementById("pointsBadge"),
+  wordDisplay: document.getElementById("wordDisplay"),
+  phoneticDisplay: document.getElementById("phoneticDisplay"),
+  showMeaningButton: document.getElementById("showMeaningButton"),
+  meaningPanel: document.getElementById("meaningPanel"),
+  partOfSpeech: document.getElementById("partOfSpeech"),
+  definitionDisplay: document.getElementById("definitionDisplay"),
+  exampleDisplay: document.getElementById("exampleDisplay"),
+  answerButtons: document.getElementById("answerButtons"),
+  knownButton: document.getElementById("knownButton"),
+  notKnownButton: document.getElementById("notKnownButton"),
+  statusMessage: document.getElementById("statusMessage"),
+  quitButton: document.getElementById("quitButton"),
+  finalScoreDisplay: document.getElementById("finalScoreDisplay"),
+  resultSummary: document.getElementById("resultSummary"),
+  playerNameInput: document.getElementById("playerNameInput"),
+  saveScoreButton: document.getElementById("saveScoreButton"),
+  playAgainButton: document.getElementById("playAgainButton"),
+  clearScoresButton: document.getElementById("clearScoresButton"),
+  tabButtons: document.querySelectorAll(".tab-button"),
+  leaderboardList: document.getElementById("leaderboardList")
 };
 
-let currentEntry = null;
-let currentWordScored = false;
+let game = null;
+let currentWord = null;
+let activeBoard = 5;
 
-function getCount(key) {
-  return Number.parseInt(localStorage.getItem(key) || "0", 10);
+function blankGame(length) {
+  return {
+    length,
+    score: 0,
+    difficulty: 3,
+    wordNumber: 1,
+    knownCount: 0,
+    unknownCount: 0,
+    answeredWords: []
+  };
 }
 
-function setCount(key, value) {
-  localStorage.setItem(key, String(value));
+function clampDifficulty(value) {
+  return Math.max(1, Math.min(5, value));
 }
 
-function updateCounters() {
-  els.knownCount.textContent = getCount(STORAGE_KEYS.known);
-  els.learnedCount.textContent = getCount(STORAGE_KEYS.learned);
+function getHighScores() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.highScores));
+    return saved || { 5: [], 10: [], 20: [] };
+  } catch {
+    return { 5: [], 10: [], 20: [] };
+  }
 }
 
-function setStatus(message) {
-  els.statusMessage.textContent = message;
+function saveHighScores(scores) {
+  localStorage.setItem(STORAGE_KEYS.highScores, JSON.stringify(scores));
 }
 
-function setLoading(isLoading) {
-  els.showMeaningButton.disabled = isLoading || !currentEntry;
-  els.skipButton.disabled = isLoading;
-  els.nextWordButton.disabled = isLoading;
+function renderLeaderboard() {
+  const scores = getHighScores();
+  const board = scores[activeBoard] || [];
+  els.leaderboardList.innerHTML = "";
+
+  if (!board.length) {
+    const empty = document.createElement("li");
+    empty.innerHTML = `<span>—</span><span>No scores yet</span><span></span>`;
+    els.leaderboardList.appendChild(empty);
+    return;
+  }
+
+  board.forEach((entry, index) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span>#${index + 1}</span>
+      <span>
+        <strong>${escapeHtml(entry.name)}</strong><br>
+        <span class="score-meta">${entry.known} known · ${entry.unknown} unknown</span>
+      </span>
+      <strong>${entry.score}</strong>
+    `;
+    els.leaderboardList.appendChild(li);
+  });
 }
 
-function resetWordView() {
-  currentEntry = null;
-  currentWordScored = false;
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;"
+  }[char]));
+}
+
+function setActiveBoard(board) {
+  activeBoard = Number(board);
+  els.tabButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.board) === activeBoard));
+  renderLeaderboard();
+}
+
+function showScreen(screenName) {
+  els.setupScreen.hidden = screenName !== "setup";
+  els.gameScreen.hidden = screenName !== "game";
+  els.resultScreen.hidden = screenName !== "result";
+}
+
+function updateGameStats() {
+  if (!game) return;
+  els.scoreDisplay.textContent = game.score;
+  els.progressDisplay.textContent = `${game.wordNumber}/${game.length}`;
+  els.difficultyDisplay.textContent = game.difficulty;
+  els.pointsBadge.textContent = `${POINTS_BY_DIFFICULTY[game.difficulty]} pts`;
+}
+
+function resetWordUI() {
   els.wordDisplay.textContent = "Loading…";
   els.phoneticDisplay.hidden = true;
   els.phoneticDisplay.textContent = "";
@@ -102,198 +167,204 @@ function resetWordView() {
   els.exampleDisplay.hidden = true;
   els.exampleDisplay.textContent = "";
   els.answerButtons.hidden = true;
-  els.nextWordButton.hidden = true;
   els.showMeaningButton.hidden = false;
   els.showMeaningButton.disabled = true;
 }
 
-async function fetchJson(url, timeoutMs = 8000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+async function startGame(length) {
+  game = blankGame(length);
+  currentWord = null;
+  showScreen("game");
+  updateGameStats();
+  await loadWord();
+}
+
+async function loadWord() {
+  resetWordUI();
+  updateGameStats();
+  els.statusMessage.textContent = `Fetching a difficulty ${game.difficulty} word…`;
 
   try {
-    const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-    return await response.json();
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function cleanCandidateWord(word) {
-  return String(word || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z\-']/g, "");
-}
-
-async function fetchCandidateWords() {
-  const words = await fetchJson(RANDOM_WORD_ENDPOINT);
-  if (!Array.isArray(words)) {
-    return [];
+    currentWord = await fetchValidWord(game.difficulty);
+  } catch {
+    currentWord = getFallbackWord(game.difficulty);
   }
 
-  return [...new Set(words.map(cleanCandidateWord).filter(Boolean))];
-}
+  els.wordDisplay.textContent = currentWord.word;
+  els.sourceBadge.textContent = currentWord.source || "API word";
 
-function pickBestDefinition(dictionaryData) {
-  if (!Array.isArray(dictionaryData) || !dictionaryData.length) {
-    return null;
+  if (currentWord.phonetic) {
+    els.phoneticDisplay.textContent = currentWord.phonetic;
+    els.phoneticDisplay.hidden = false;
   }
 
-  for (const entry of dictionaryData) {
-    for (const meaning of entry.meanings || []) {
-      for (const definition of meaning.definitions || []) {
-        if (definition.definition) {
-          return {
-            word: entry.word,
-            phonetic: entry.phonetic || (entry.phonetics || []).find(item => item.text)?.text || "",
-            partOfSpeech: meaning.partOfSpeech || "",
-            definition: definition.definition,
-            example: definition.example || "",
-            source: "API word"
-          };
-        }
-      }
+  els.showMeaningButton.disabled = false;
+  els.statusMessage.textContent = "Reveal the meaning, then choose honestly.";
+}
+
+async function fetchValidWord(difficulty) {
+  const seenThisGame = new Set(game.answeredWords.map(item => item.word.toLowerCase()));
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const word = await fetchRandomWord(difficulty);
+    if (!word || seenThisGame.has(word.toLowerCase())) continue;
+
+    const definition = await fetchDefinition(word);
+    if (definition) {
+      return { ...definition, source: `Difficulty ${difficulty}` };
     }
   }
 
-  return null;
+  throw new Error("No valid word found");
+}
+
+async function fetchRandomWord(difficulty) {
+  const response = await fetch(`${RANDOM_WORD_API}?number=1&diff=${difficulty}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Random word fetch failed");
+  const data = await response.json();
+  return Array.isArray(data) ? data[0] : null;
 }
 
 async function fetchDefinition(word) {
-  const dictionaryData = await fetchJson(DICTIONARY_ENDPOINT(word));
-  return pickBestDefinition(dictionaryData);
-}
+  const response = await fetch(DICTIONARY_API(word));
+  if (!response.ok) return null;
+  const data = await response.json();
+  const firstEntry = data?.[0];
+  const firstMeaning = firstEntry?.meanings?.[0];
+  const firstDefinition = firstMeaning?.definitions?.[0];
 
-async function getApiEntry() {
-  const maxBatches = 4;
+  if (!firstDefinition?.definition) return null;
 
-  for (let batch = 0; batch < maxBatches; batch += 1) {
-    const candidates = await fetchCandidateWords();
-
-    for (const word of candidates) {
-      try {
-        const entry = await fetchDefinition(word);
-        if (entry) {
-          return entry;
-        }
-      } catch (error) {
-        console.warn(`No usable definition for ${word}`, error);
-      }
-    }
-  }
-
-  throw new Error("Could not find a random word with a usable definition.");
-}
-
-function getFallbackEntry() {
-  const index = Math.floor(Math.random() * FALLBACK_WORDS.length);
   return {
-    ...FALLBACK_WORDS[index],
-    source: "Offline backup"
+    word: firstEntry.word || word,
+    phonetic: firstEntry.phonetic || firstEntry.phonetics?.find(item => item.text)?.text || "",
+    partOfSpeech: firstMeaning.partOfSpeech || "",
+    definition: firstDefinition.definition,
+    example: firstDefinition.example || ""
   };
 }
 
-function renderEntry(entry) {
-  currentEntry = entry;
-  currentWordScored = false;
+function getFallbackWord(difficulty) {
+  const list = FALLBACK_WORDS[difficulty] || FALLBACK_WORDS[3];
+  const pick = list[Math.floor(Math.random() * list.length)];
+  return { ...pick, source: "Offline fallback" };
+}
 
-  els.wordDisplay.textContent = entry.word;
-  els.sourceBadge.textContent = entry.source || "API word";
+function revealMeaning() {
+  if (!currentWord) return;
+  els.partOfSpeech.textContent = currentWord.partOfSpeech || "definition";
+  els.definitionDisplay.textContent = currentWord.definition;
 
-  if (entry.phonetic) {
-    els.phoneticDisplay.textContent = entry.phonetic;
-    els.phoneticDisplay.hidden = false;
-  } else {
-    els.phoneticDisplay.hidden = true;
-  }
-
-  els.partOfSpeech.textContent = entry.partOfSpeech || "definition";
-  els.definitionDisplay.textContent = entry.definition;
-
-  if (entry.example) {
-    els.exampleDisplay.textContent = `Example: ${entry.example}`;
+  if (currentWord.example) {
+    els.exampleDisplay.textContent = `Example: ${currentWord.example}`;
     els.exampleDisplay.hidden = false;
-  } else {
-    els.exampleDisplay.hidden = true;
   }
-
-  els.meaningPanel.hidden = true;
-  els.answerButtons.hidden = true;
-  els.nextWordButton.hidden = true;
-  els.showMeaningButton.hidden = false;
-  els.showMeaningButton.disabled = false;
-}
-
-async function loadNewWord() {
-  resetWordView();
-  setLoading(true);
-  setStatus("Fetching a hard random word…");
-
-  try {
-    const entry = await getApiEntry();
-    renderEntry(entry);
-    setStatus("Word ready. Reveal the meaning when you are ready.");
-  } catch (error) {
-    console.warn(error);
-    renderEntry(getFallbackEntry());
-    setStatus("Using an offline backup word because the API did not return a usable result.");
-  } finally {
-    setLoading(false);
-  }
-}
-
-function showMeaning() {
-  if (!currentEntry) return;
 
   els.meaningPanel.hidden = false;
   els.answerButtons.hidden = false;
   els.showMeaningButton.hidden = true;
-  setStatus("Mark whether this word was already known or newly learned.");
+  els.statusMessage.textContent = "Did you already know it?";
 }
 
-function scoreCurrentWord(type) {
-  if (!currentEntry || currentWordScored) return;
+async function answerWord(wasKnown) {
+  if (!game || !currentWord) return;
 
-  const key = type === "known" ? STORAGE_KEYS.known : STORAGE_KEYS.learned;
-  setCount(key, getCount(key) + 1);
-  currentWordScored = true;
-  updateCounters();
+  const points = wasKnown ? POINTS_BY_DIFFICULTY[game.difficulty] : 0;
+  game.score += points;
+  game.knownCount += wasKnown ? 1 : 0;
+  game.unknownCount += wasKnown ? 0 : 1;
+  game.answeredWords.push({
+    word: currentWord.word,
+    difficulty: game.difficulty,
+    points,
+    known: wasKnown
+  });
 
-  els.answerButtons.hidden = true;
-  els.nextWordButton.hidden = false;
+  if (game.wordNumber >= game.length) {
+    finishGame();
+    return;
+  }
 
-  const resultText = type === "known" ? "already known" : "newly learned";
-  setStatus(`Marked “${currentEntry.word}” as ${resultText}.`);
+  game.difficulty = clampDifficulty(game.difficulty + (wasKnown ? 1 : -1));
+  game.wordNumber += 1;
+  await loadWord();
 }
 
-function resetCounters() {
-  const shouldReset = window.confirm("Reset both counters back to zero?");
-  if (!shouldReset) return;
-
-  setCount(STORAGE_KEYS.known, 0);
-  setCount(STORAGE_KEYS.learned, 0);
-  updateCounters();
-  setStatus("Counters reset.");
+function finishGame() {
+  els.finalScoreDisplay.textContent = `${game.score} points`;
+  els.resultSummary.textContent = `${game.length}-word game · ${game.knownCount} known · ${game.unknownCount} not known`;
+  els.playerNameInput.value = localStorage.getItem(STORAGE_KEYS.lastName) || "";
+  els.saveScoreButton.disabled = false;
+  showScreen("result");
+  setActiveBoard(game.length);
+  els.playerNameInput.focus();
 }
 
-els.showMeaningButton.addEventListener("click", showMeaning);
-els.knownButton.addEventListener("click", () => scoreCurrentWord("known"));
-els.learnedButton.addEventListener("click", () => scoreCurrentWord("learned"));
-els.nextWordButton.addEventListener("click", loadNewWord);
-els.skipButton.addEventListener("click", loadNewWord);
-els.resetButton.addEventListener("click", resetCounters);
+function saveCurrentScore() {
+  if (!game) return;
 
-updateCounters();
-loadNewWord();
+  const name = (els.playerNameInput.value || "Player").trim().slice(0, 18) || "Player";
+  localStorage.setItem(STORAGE_KEYS.lastName, name);
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch(error => {
-      console.warn("Service worker registration failed", error);
-    });
+  const scores = getHighScores();
+  const board = scores[game.length] || [];
+  board.push({
+    name,
+    score: game.score,
+    known: game.knownCount,
+    unknown: game.unknownCount,
+    date: new Date().toISOString()
+  });
+
+  scores[game.length] = board
+    .sort((a, b) => b.score - a.score || b.known - a.known || new Date(a.date) - new Date(b.date))
+    .slice(0, 10);
+
+  saveHighScores(scores);
+  els.saveScoreButton.disabled = true;
+  renderLeaderboard();
+  els.statusMessage.textContent = "Score saved.";
+}
+
+function clearScores() {
+  const confirmed = confirm(`Clear the ${activeBoard}-word high score list?`);
+  if (!confirmed) return;
+  const scores = getHighScores();
+  scores[activeBoard] = [];
+  saveHighScores(scores);
+  renderLeaderboard();
+}
+
+function attachEvents() {
+  els.lengthButtons.forEach(button => {
+    button.addEventListener("click", () => startGame(Number(button.dataset.length)));
+  });
+
+  els.showMeaningButton.addEventListener("click", revealMeaning);
+  els.knownButton.addEventListener("click", () => answerWord(true));
+  els.notKnownButton.addEventListener("click", () => answerWord(false));
+  els.quitButton.addEventListener("click", () => {
+    if (confirm("End this game without saving the score?")) {
+      game = null;
+      showScreen("setup");
+    }
+  });
+
+  els.saveScoreButton.addEventListener("click", saveCurrentScore);
+  els.playAgainButton.addEventListener("click", () => showScreen("setup"));
+  els.clearScoresButton.addEventListener("click", clearScores);
+
+  els.tabButtons.forEach(button => {
+    button.addEventListener("click", () => setActiveBoard(button.dataset.board));
   });
 }
+
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
+}
+
+attachEvents();
+renderLeaderboard();
+registerServiceWorker();
